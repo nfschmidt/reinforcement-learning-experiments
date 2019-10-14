@@ -1,7 +1,9 @@
 import torch
 import benchmark
+from collections import defaultdict
 
 def fit(env,
+        q_table=None,
         episodes=10_000,
         validate_n=1000,
         validation_episodes=100,
@@ -10,9 +12,10 @@ def fit(env,
         discount_factor=0.99,
         verbose=True):
 
-    q_table = torch.zeros((env.observation_space.n, env.action_space.n))
+    if q_table is None:
+        q_table = defaultdict(lambda: torch.zeros((env.action_space.n,)))
 
-    best_q_table = q_table.clone()
+    best_q_table = _clone(q_table, env)
     best_score = 0.0
 
     for ep in range(1, episodes+1):
@@ -33,10 +36,10 @@ def fit(env,
 
             # update q table using bellman's equation
             target_value = torch.max(q_table[new_state])
-            q_table[state, action] += \
+            q_table[state][action] += \
                     learning_rate*(reward
                                    + discount_factor*target_value
-                                   - q_table[state, action])   
+                                   - q_table[state][action])   
 
             state = new_state
 
@@ -52,8 +55,18 @@ def fit(env,
 
             if mean_reward > best_score:
                 best_score = mean_reward
-                best_q_table = q_table.clone()
+                best_q_table = _clone(q_table, env)
                 if verbose:
                     print(f'Episode {ep}: New best score! {best_score}')
                     
     return best_score, best_q_table
+
+def _clone(q_table, env):
+    if type(q_table) == torch.Tensor:
+        return q_table.clone()
+
+    copy = defaultdict(lambda: torch.zeros((env.action_space.n,)))
+    for k, v in q_table.items():
+        copy[k] = v.clone()
+
+    return copy
