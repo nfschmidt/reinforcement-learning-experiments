@@ -1,6 +1,7 @@
 import torch
 import benchmark
 from collections import defaultdict
+from tqdm import tqdm
 
 def fit(env,
         q_table=None,
@@ -16,9 +17,13 @@ def fit(env,
         q_table = defaultdict(lambda: torch.zeros((env.action_space.n,)))
 
     best_q_table = _clone(q_table, env)
-    best_score = 0.0
+    best_score = None
 
-    for ep in range(1, episodes+1):
+    episodes_range = range(1, episodes+1)
+    if verbose:
+        episodes = tqdm(episodes_range)
+
+    for ep in episodes_range:
         state = env.reset()
         done = False
         total_reward = 0
@@ -53,7 +58,7 @@ def fit(env,
                                                episodes=validation_episodes)
             mean_reward = rewards.mean().item()
 
-            if mean_reward > best_score:
+            if best_score is None or mean_reward > best_score:
                 best_score = mean_reward
                 best_q_table = _clone(q_table, env)
                 if verbose:
