@@ -1,7 +1,7 @@
 import torch
 import benchmark
 from collections import defaultdict
-from tqdm import tqdm
+from tqdm import tqdm_notebook as tqdm
 
 def fit(env,
         q_table=None,

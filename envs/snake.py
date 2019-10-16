@@ -5,10 +5,14 @@ import gym
 import matplotlib.pyplot as plt
 
 class Snake(gym.Env):
-    DOWN = 0
-    UP = 1
+    RIGHT = 0
+    FORWARD = 1
     LEFT = 2
-    RIGHT = 3
+
+    _DIR_UP = 0
+    _DIR_LEFT = 1
+    _DIR_DOWN = 2
+    _DIR_RIGHT = 3
 
     def __init__(self,
                  step_reward=0,
@@ -34,13 +38,13 @@ class Snake(gym.Env):
             self._max_steps_without_gain = self._side*3
 
         # action space
-        self.action_space = gym.spaces.Discrete(4)
+        self.action_space = gym.spaces.Discrete(3)
 
         # observation space
         self.observation_space = \
                 gym.spaces.Box(low=-self._side,
                                high=self._side,
-                               shape=(6,),
+                               shape=(5,),
                                dtype=np.int8)
 
         self.reset()
@@ -78,16 +82,17 @@ class Snake(gym.Env):
         if self._done:
             return self._state(), reward, True, None
 
-        if not self._valid_action(action):
-            action = self._direction
+        # this computation takes advantage of the actions and
+        # directions numbering to update the direction
+        self._direction = (self._direction + action - 1) % 4
 
-        if action == self.__class__.RIGHT:
+        if self._direction == self.__class__._DIR_RIGHT:
             new_head = self._head[0], self._head[1]+1
-        if action == self.__class__.LEFT:
+        elif self._direction == self.__class__._DIR_LEFT:
             new_head = self._head[0], self._head[1]-1
-        if action == self.__class__.UP:
+        elif self._direction == self.__class__._DIR_UP:
             new_head = self._head[0]-1, self._head[1]
-        if action == self.__class__.DOWN:
+        elif self._direction == self.__class__._DIR_DOWN:
             new_head = self._head[0]+1, self._head[1]
 
         # If the head collides, end the episode
@@ -115,20 +120,7 @@ class Snake(gym.Env):
                 self._body.pop()
             reward = self._step_reward
 
-        self._direction = action
-
         return self._state(), reward, False, None
-
-    def _valid_action(self, action):
-        if not self._body:
-            # if the snake consists only of the head it can go in the
-            # direction opposite to the current direction.
-            return True
-
-        return (action == self.__class__.RIGHT and not self._direction == self.__class__.LEFT or
-                action == self.__class__.LEFT and not self._direction == self.__class__.RIGHT or
-                action == self.__class__.UP and not self._direction == self.__class__.DOWN or
-                action == self.__class__.DOWN and not self._direction == self.__class__.UP)
 
     def _new_target(self):
         new_target = None
@@ -170,17 +162,33 @@ class Snake(gym.Env):
                 down_distance = d-1
                 break
 
+        if self._direction == self.__class__._DIR_UP:
+            forward_distance = up_distance
+            left_distance = left_distance
+            right_distance = right_distance
+        elif self._direction == self.__class__._DIR_LEFT:
+            forward_distance = left_distance
+            left_distance = down_distance
+            right_distance = up_distance
+        elif self._direction == self.__class__._DIR_DOWN:
+            forward_distance = down_distance
+            left_distance = right_distance
+            right_distance = left_distance
+        elif self._direction == self.__class__._DIR_RIGHT:
+            forward_distance = right_distance
+            left_distance = up_distance
+            right_distance = down_distance
+
         target_distance = \
                 self._target[0] - self._head[0], self._target[1] - self._head[1]
 
         return (target_distance[0], target_distance[1],
-                left_distance, right_distance,
-                up_distance, down_distance)
+                left_distance, forward_distance, right_distance)
 
     def reset(self):
         self._head = tuple(random.randint(0, self._side-1) for _ in range(2))
         self._body = deque()
-        self._direction = None
+        self._direction = random.randint(0, 3)
 
         # set target position
         self._new_target()
