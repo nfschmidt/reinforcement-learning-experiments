@@ -179,8 +179,18 @@ class Snake(gym.Env):
             left_distance = up_distance
             right_distance = down_distance
 
-        target_distance = \
-                self._target[0] - self._head[0], self._target[1] - self._head[1]
+        if self._direction == self.__class__._DIR_UP:
+            target_distance = \
+                    -(self._target[0] - self._head[0]), -(self._target[1] - self._head[1])
+        if self._direction == self.__class__._DIR_LEFT:
+            target_distance = \
+                    -(self._target[1] - self._head[1]), self._target[0] - self._head[0]
+        if self._direction == self.__class__._DIR_DOWN:
+            target_distance = \
+                    self._target[0] - self._head[0], self._target[1] - self._head[1]
+        if self._direction == self.__class__._DIR_RIGHT:
+            target_distance = \
+                    self._target[1] - self._head[1], -(self._target[1] - self._head[1])
 
         return (target_distance[0], target_distance[1],
                 left_distance, forward_distance, right_distance)
